@@ -26,7 +26,7 @@ public class ID3 {
 
     public ID3(DataSet dataSet, DataSet testSet, int classColumn) {
         //Create a boolean array to keep track of whether or not data has been split by the algorithm already.
-        this.usedFeatures = new int[dataSet.columnCount()];
+        this.usedFeatures = new boolean[dataSet.columnCount()];
         //Mark the class column so it isn't used. Afterall, we're trying to derive that.
         this.classColumn = classColumn;
         this.usedFeatures[classColumn] = true;

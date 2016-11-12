@@ -1,6 +1,7 @@
 package csci446.project3;
 
 import com.sun.org.apache.xpath.internal.operations.Bool;
+import csci446.project3.ID3.ID3;
 import csci446.project3.Util.Data;
 import csci446.project3.Util.DataParser;
 import csci446.project3.Util.DataSet;
@@ -39,6 +40,10 @@ public class Main {
                 DataType.Boolean, DataType.Boolean, DataType.Boolean, DataType.Boolean,
         };
         DataSet dataSet = DataParser.parseData("house-votes-84", columnNames, dataTypes);
+        //Lets setup ID3:
+        //DataSet, TestSet, column with the class categorization. (republican, democrat in this case)
+        ID3 id3 = new ID3(dataSet, dataSet, 0);
+
         //You can use any function in DataSet, its an extension to an ArrayList.
         //You can do anything you would normally do with an array list and a bit more
         //Printing a DataSet.

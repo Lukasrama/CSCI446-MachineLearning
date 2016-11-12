@@ -25,4 +25,8 @@ public class DataSet extends ArrayList<Data<?>[]> {
             System.out.println();
         }
     }
+
+    public int columnCount() {
+        return this.columnNames.length;
+    }
 }

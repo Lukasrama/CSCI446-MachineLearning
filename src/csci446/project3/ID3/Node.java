@@ -23,9 +23,9 @@ public class Node {
         this.column = column;
     }
 
-    public Node(DataSet data, Node parent) {
+    public Node(DataSet data, Node parent, int column) {
         this.isFeature = false;
-        this.column = -1;
+        this.column = column;
         this.parent = parent;
 
         this.data = data;

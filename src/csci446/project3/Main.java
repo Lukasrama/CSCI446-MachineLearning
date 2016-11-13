@@ -8,6 +8,8 @@ import csci446.project3.Util.DataParser;
 import csci446.project3.Util.DataSet;
 import csci446.project3.Util.DataType;
 
+import java.util.Collections;
+
 public class Main {
 
     public static void main(String[] args) throws Exception {
@@ -21,13 +23,27 @@ public class Main {
          * To keep this class clean, csci446.project3.DataSets has the all the basic info to pass to the algorithm.
          */
         DataSet dataSet = DataParser.parseData(HouseVotes.filename, HouseVotes.columnNames, HouseVotes.dataTypes);
+        /*
+         * The contents of the DataSet are not always random.
+         * You can shuffle them using Collections.shuffle()
+         */
+
+        Collections.shuffle(dataSet);
+
+        /*
+         * Lastly, you want to split the data into a regular dataset and a testing set.
+         * DataSet has a function for this, since it gets a little weird.
+         * This grabs 10% of the data in the dataset and sets pulls it out to make the testing set.
+         */
+
+        DataSet testingSet = dataSet.getTestingSet(.1);
 
         /*
          * Lets setup ID3:
          * DataSet, TestSet, column with the class categorization. (republican, democrat in this case)
          */
 
-        ID3 id3 = new ID3(dataSet, dataSet, 0);
+        ID3 id3 = new ID3(dataSet, testingSet, 0);
 
 
 

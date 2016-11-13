@@ -15,6 +15,7 @@ import java.util.Set;
 public class ID3 {
 
     private DataSet fullDataSet;
+    private DataSet testSet;
 
     private boolean[] usedFeatures;
     private int classColumn;
@@ -24,12 +25,14 @@ public class ID3 {
     private Node root;
     private Queue<Node> unfinishedNodes;
 
-    public ID3(DataSet dataSet, DataSet testSet, int classColumn) {
+    public ID3(DataSet dataSet, DataSet testSet, int classColumn) throws Exception {
         //Create a boolean array to keep track of whether or not data has been split by the algorithm already.
         this.usedFeatures = new boolean[dataSet.columnCount()];
         //Mark the class column so it isn't used. Afterall, we're trying to derive that.
         this.classColumn = classColumn;
         this.usedFeatures[classColumn] = true;
+        this.fullDataSet = dataSet;
+        this.testSet = testSet;
 
         ArrayList<String> classes = new ArrayList<String>();
         //Create a unique list of all the possible classes.
@@ -38,10 +41,119 @@ public class ID3 {
                 classes.add((String) data[classColumn].value());
             }
         }
+        this.classes = new String[classes.size()];
+        classes.toArray(this.classes);
+        this.generateTree();
     }
 
-    public void generateTree() {
+    public void generateTree() throws Exception {
+        //Create root node and mark the feature as used.
+        int bestCol = findHighestGainColumn();
+        this.root = new Node(bestCol);
+        this.root.data = this.fullDataSet;
+        this.usedFeatures[bestCol] = true;
+        //Get the dataType of this feature to create the children.
+        DataType dataType = this.fullDataSet.get(0)[bestCol].type();
+        createChildrenForFeature(this.root, dataType);
 
+        while(!unfinishedNodes.isEmpty()) {
+            int nextColumn = findHighestGainColumn();
+            Node parent = unfinishedNodes.peek();
+            //Create the new feature node
+            Node nextNode = new Node(nextColumn);
+            parent.children.add(nextNode);
+            parent.children.get(0).data = parent.data;
+            this.usedFeatures[bestCol] = true;
+            //Get datatype and create children.
+            DataType dt = this.fullDataSet.get(0)[nextColumn].type();
+            createChildrenForFeature(nextNode, dt);
+        }
+    }
+
+    public void createChildrenForFeature(Node parent, DataType dataType) {
+        if(dataType == DataType.Boolean) {
+            Boolean[] values = getBooleanValues(parent.column);
+            //Make a new node for each value appearing under that node.
+            for(Boolean value : values) {
+                ArrayList<Integer> indexes = new ArrayList<Integer>();
+                //Grab each item that's value matches the one we're searching for.
+                for (int i = 0; i < parent.data.size(); i++) {
+                    if(((Boolean) parent.data.get(i)[parent.column].value()).equals(value)) {
+                        indexes.add(i);
+                    }
+                }
+                if(indexes.size() > 0) {
+                    Node newNode = new Node(parent.data.createSubset((Integer[]) indexes.toArray()), parent, parent.column);
+                    parent.children.add(newNode);
+                    if(!isPure(newNode)) {
+                        this.unfinishedNodes.add(newNode);
+                    }
+                }
+            }
+        } else if (dataType == DataType.String) {
+            String[] values = getStringValues(parent.column);
+            //Make a new node for each value appearing under that node.
+            for(String value : values) {
+                ArrayList<Integer> indexes = new ArrayList<Integer>();
+                //Grab each item that's value matches the one we're searching for.
+                for (int i = 0; i < parent.data.size(); i++) {
+                    if(((String) parent.data.get(i)[parent.column].value()).equals(value)) {
+                        indexes.add(i);
+                    }
+                }
+                if(indexes.size() > 0) {
+                    Node newNode = new Node(parent.data.createSubset((Integer[]) indexes.toArray()), parent, parent.column);
+                    parent.children.add(newNode);
+                    this.unfinishedNodes.add(newNode);
+                }
+            }
+        } else if (dataType == DataType.Integer) {
+            Integer[] values = getIntegerValues(parent.column);
+            //Make a new node for each value appearing under that node.
+            for(Integer value : values) {
+                ArrayList<Integer> indexes = new ArrayList<Integer>();
+                //Grab each item that's value matches the one we're searching for.
+                for (int i = 0; i < parent.data.size(); i++) {
+                    if(((Integer) parent.data.get(i)[parent.column].value()).equals(value)) {
+                        indexes.add(i);
+                    }
+                }
+                if(indexes.size() > 0) {
+                    Node newNode = new Node(parent.data.createSubset((Integer[]) indexes.toArray()), parent, parent.column);
+                    parent.children.add(newNode);
+                    this.unfinishedNodes.add(newNode);
+                }
+            }
+        } else {
+            //Double
+            Double[] values = getDoubleValues(parent.column);
+            //Make a new node for each value appearing under that node.
+            for(Double value : values) {
+                ArrayList<Integer> indexes = new ArrayList<Integer>();
+                //Grab each item that's value matches the one we're searching for.
+                for (int i = 0; i < parent.data.size(); i++) {
+                    if(((Double) parent.data.get(i)[parent.column].value()).equals(value)) {
+                        indexes.add(i);
+                    }
+                }
+                if(indexes.size() > 0) {
+                    Node newNode = new Node(parent.data.createSubset((Integer[]) indexes.toArray()), parent, parent.column);
+                    parent.children.add(newNode);
+                    this.unfinishedNodes.add(newNode);
+                }
+            }
+        }
+    }
+
+    public boolean isPure(Node node) {
+        DataSet dataset = node.data;
+        String first = (String) dataset.get(0)[classColumn].value();
+        for (Data<?>[] data : dataset) {
+            if(!((String) data[classColumn].value()).equals(first)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public int findHighestGainColumn() throws Exception {
@@ -65,8 +177,11 @@ public class ID3 {
         double[] classProbabilities = occurrencesToProbability(classOccurences);
         double featureEntropy = entropy(classProbabilities); //Get the entropy for all the values of this feature/column.
         //Count up the feature's value counts
-        //TODO: MAKE EVALUATABLE ON AN EMPTY TREE.
-        DataSet data = unfinishedNodes.peek().data;
+        DataSet data = this.fullDataSet;
+        if(root != null) {
+            data = unfinishedNodes.peek().data;
+        }
+
         DataType dataType = data.get(0)[column].type();
 
         Double[] valueEntropies;
@@ -132,7 +247,10 @@ public class ID3 {
     }
 
     public Boolean[] getBooleanValues(int column) {
-        DataSet data = unfinishedNodes.peek().data;
+        DataSet data = this.fullDataSet;
+        if(root != null) {
+            data = unfinishedNodes.peek().data;
+        }
         ArrayList<Boolean> values = new ArrayList<Boolean>();
         // Build a list of all values for a feature.
         for(int i = 0; i < data.size(); i++) {
@@ -144,7 +262,10 @@ public class ID3 {
     }
 
     public String[] getStringValues(int column) {
-        DataSet data = unfinishedNodes.peek().data;
+        DataSet data = this.fullDataSet;
+        if(root != null) {
+            data = unfinishedNodes.peek().data;
+        }
         ArrayList<String> values = new ArrayList<String>();
         // Build a list of all values for a feature.
         for(int i = 0; i < data.size(); i++) {
@@ -156,7 +277,10 @@ public class ID3 {
     }
 
     public Integer[] getIntegerValues(int column) {
-        DataSet data = unfinishedNodes.peek().data;
+        DataSet data = this.fullDataSet;
+        if(root != null) {
+            data = unfinishedNodes.peek().data;
+        }
         ArrayList<Integer> values = new ArrayList<Integer>();
         // Build a list of all values for a feature.
         for(int i = 0; i < data.size(); i++) {
@@ -168,7 +292,10 @@ public class ID3 {
     }
 
     public Double[] getDoubleValues(int column) {
-        DataSet data = unfinishedNodes.peek().data;
+        DataSet data = this.fullDataSet;
+        if(root != null) {
+            data = unfinishedNodes.peek().data;
+        }
         ArrayList<Double> values = new ArrayList<Double>();
         // Build a list of all values for a feature.
         for(int i = 0; i < data.size(); i++) {
@@ -182,7 +309,10 @@ public class ID3 {
 
     public int[] getClassOccurrences(int column, Boolean value) {
         //Get the available data for the node we want to expand on.
-        DataSet data = unfinishedNodes.peek().data;
+        DataSet data = this.fullDataSet;
+        if(root != null) {
+            data = unfinishedNodes.peek().data;
+        }
 
         int classOccurrences[] = new int[classes.length];
 
@@ -204,7 +334,10 @@ public class ID3 {
 
     public int[] getClassOccurrences(int column, String value) {
         //Get the available data for the node we want to expand on.
-        DataSet data = unfinishedNodes.peek().data;
+        DataSet data = this.fullDataSet;
+        if(root != null) {
+            data = unfinishedNodes.peek().data;
+        }
 
         int classOccurrences[] = new int[classes.length];
 
@@ -226,7 +359,10 @@ public class ID3 {
 
     public int[] getClassOccurrences(int column, Integer value) {
         //Get the available data for the node we want to expand on.
-        DataSet data = unfinishedNodes.peek().data;
+        DataSet data = this.fullDataSet;
+        if(root != null) {
+            data = unfinishedNodes.peek().data;
+        }
 
         int classOccurrences[] = new int[classes.length];
 
@@ -248,7 +384,10 @@ public class ID3 {
 
     public int[] getClassOccurrences(int column, Double value) {
         //Get the available data for the node we want to expand on.
-        DataSet data = unfinishedNodes.peek().data;
+        DataSet data = this.fullDataSet;
+        if(root != null) {
+            data = unfinishedNodes.peek().data;
+        }
 
         int classOccurrences[] = new int[classes.length];
 
@@ -282,7 +421,10 @@ public class ID3 {
 
     public int[] getClassOccurrencesForFeature(int column) {
         //Get the available data for the node we want to expand on.
-        DataSet data = unfinishedNodes.peek().data;
+        DataSet data = this.fullDataSet;
+        if(root != null) {
+            data = unfinishedNodes.peek().data;
+        }
 
         int classOccurrences[] = new int[classes.length];
 
@@ -291,7 +433,7 @@ public class ID3 {
                 //Look for the class index corresponding to the class of this data point.
                 if(((String) data.get(i)[classColumn].value()).equals(classes[j])) {
                     //Increment the number of occurrences for this node.
-                    classOccurrences[i]++;
+                    classOccurrences[j]++;
                     break;
                 }
             }

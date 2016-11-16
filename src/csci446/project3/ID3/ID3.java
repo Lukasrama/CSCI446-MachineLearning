@@ -6,8 +6,9 @@ import csci446.project3.Util.DataSet;
 import csci446.project3.Util.DataType;
 
 import java.util.ArrayList;
-import java.util.Queue;
-import java.util.Set;
+import java.util.LinkedList;
+
+import static java.lang.Double.NaN;
 
 /**
  * Created by cetho on 11/12/2016.
@@ -23,7 +24,7 @@ public class ID3 {
     private String classes[];
 
     private Node root;
-    private Queue<Node> unfinishedNodes;
+    private LinkedList<Node> unfinishedNodes;
 
     public ID3(DataSet dataSet, DataSet testSet, int classColumn) throws Exception {
         //Create a boolean array to keep track of whether or not data has been split by the algorithm already.
@@ -33,6 +34,7 @@ public class ID3 {
         this.usedFeatures[classColumn] = true;
         this.fullDataSet = dataSet;
         this.testSet = testSet;
+        this.unfinishedNodes = new LinkedList<Node>();
 
         ArrayList<String> classes = new ArrayList<String>();
         //Create a unique list of all the possible classes.
@@ -44,30 +46,44 @@ public class ID3 {
         this.classes = new String[classes.size()];
         classes.toArray(this.classes);
         this.generateTree();
+        //Sweet we have a tree.
+        System.out.println("Decision Tree generated.");
     }
 
     public void generateTree() throws Exception {
         //Create root node and mark the feature as used.
         int bestCol = findHighestGainColumn();
-        this.root = new Node(bestCol);
-        this.root.data = this.fullDataSet;
+        Node root = new Node(bestCol);
+        root.data = this.fullDataSet;
         this.usedFeatures[bestCol] = true;
         //Get the dataType of this feature to create the children.
         DataType dataType = this.fullDataSet.get(0)[bestCol].type();
-        createChildrenForFeature(this.root, dataType);
+        createChildrenForFeature(root, dataType);
+        this.root = root;
 
-        while(!unfinishedNodes.isEmpty()) {
-            int nextColumn = findHighestGainColumn();
+        while(!unfinishedNodes.isEmpty() && !noMoreFeatures()) {
             Node parent = unfinishedNodes.peek();
+            int nextColumn = findHighestGainColumn(parent);
             //Create the new feature node
             Node nextNode = new Node(nextColumn);
             parent.children.add(nextNode);
             parent.children.get(0).data = parent.data;
-            this.usedFeatures[bestCol] = true;
+            nextNode.parent = parent;
+            this.usedFeatures[nextColumn] = true;
             //Get datatype and create children.
             DataType dt = this.fullDataSet.get(0)[nextColumn].type();
             createChildrenForFeature(nextNode, dt);
+            unfinishedNodes.remove(parent);
         }
+    }
+
+    public boolean noMoreFeatures() {
+        for (boolean col : this.usedFeatures) {
+            if(!col) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public void createChildrenForFeature(Node parent, DataType dataType) {
@@ -83,7 +99,7 @@ public class ID3 {
                     }
                 }
                 if(indexes.size() > 0) {
-                    Node newNode = new Node(parent.data.createSubset((Integer[]) indexes.toArray()), parent, parent.column);
+                    Node newNode = new Node(parent.data.createSubset(indexes.toArray(new Integer[indexes.size()])), parent, parent.column);
                     parent.children.add(newNode);
                     if(!isPure(newNode)) {
                         this.unfinishedNodes.add(newNode);
@@ -159,15 +175,36 @@ public class ID3 {
     public int findHighestGainColumn() throws Exception {
         double highestValue = Integer.MIN_VALUE;
         int highestColumn = -1;
-        for(int i = 0; i < fullDataSet.get(i).length; i++) {
-            //Only evaluate unused columns.
-            if(!usedFeatures[i]) {
-                double gain = gain(i);
-                if(highestValue < gain) {
+        //Only evaluate unused columns.
+        for (int j = 0; j < fullDataSet.get(0).length; j++) {
+            if(!usedFeatures[j]) {
+                double gain = gain(j);
+                if (highestValue < gain) {
                     highestValue = gain;
-                    highestColumn = i;
+                    highestColumn = j;
                 }
             }
+        }
+        if(highestColumn == -1) {
+            System.out.println(this.usedFeatures.toString());
+        }
+        return highestColumn;
+    }
+
+    public int findHighestGainColumn(Node relativeTo) throws Exception {
+        double highestValue = Double.MIN_VALUE;
+        int highestColumn = -1;
+        for (int j = 0; j < relativeTo.data.get(0).length; j++) {
+            if(!usedFeatures[j]) {
+                double gain = gain(j);
+                if (highestValue < gain) {
+                    highestValue = gain;
+                    highestColumn = j;
+                }
+            }
+        }
+        if(highestColumn == -1) {
+            System.out.println(this.usedFeatures.toString());
         }
         return highestColumn;
     }
@@ -242,7 +279,6 @@ public class ID3 {
         for(double e : valueEntropies) {
             gain -= e;
         }
-
         return gain;
     }
 
@@ -256,9 +292,12 @@ public class ID3 {
         for(int i = 0; i < data.size(); i++) {
             if(!values.contains((Boolean) data.get(i)[column].value())) {
                 values.add((Boolean) data.get(i)[column].value());
+                if(values.size() == 2) {
+                    break;
+                }
             }
         }
-        return (Boolean[]) data.toArray();
+        return values.toArray(new Boolean[values.size()]);
     }
 
     public String[] getStringValues(int column) {
@@ -273,7 +312,7 @@ public class ID3 {
                 values.add((String) data.get(i)[column].value());
             }
         }
-        return (String[]) data.toArray();
+        return values.toArray(new String[values.size()]);
     }
 
     public Integer[] getIntegerValues(int column) {
@@ -288,7 +327,7 @@ public class ID3 {
                 values.add((Integer) data.get(i)[column].value());
             }
         }
-        return (Integer[]) data.toArray();
+        return values.toArray(new Integer[values.size()]);
     }
 
     public Double[] getDoubleValues(int column) {
@@ -303,7 +342,7 @@ public class ID3 {
                 values.add((Double) data.get(i)[column].value());
             }
         }
-        return (Double[]) data.toArray();
+        return values.toArray(new Double[values.size()]);
     }
 
 
@@ -323,7 +362,7 @@ public class ID3 {
                     //Look for the class index corresponding to the class of this data point.
                     if (((String) data.get(i)[classColumn].value()).equals(classes[j])) {
                         //Increment the number of occurrences for this node.
-                        classOccurrences[i]++;
+                        classOccurrences[j]++;
                         break;
                     }
                 }
@@ -414,7 +453,7 @@ public class ID3 {
             points += i;
         }
         for(int i = 0; i < probabilities.length; i++) {
-            probabilities[i] = occurrences[i]/points;
+            probabilities[i] = (double) occurrences[i]/points;
         }
         return probabilities;
     }
@@ -444,18 +483,15 @@ public class ID3 {
     public double entropy(double[] probabilities) {
         double result = 0;
         for(double p : probabilities) {
-            result -= p*Math.log(p)/Math.log(2); //Uses change of base for logarithms since Math.log is base 10.
+            /*
+             * Logarithm explodes and give NaN if you hand it a 0.
+             */
+            Double exp = p * Math.log(p) / Math.log(2); //Uses change of base for logarithms since Math.log is base 10.
+            if(!Double.isNaN(exp)) {
+                result -= exp;
+            }
         }
         return result;
     }
 
-    public Integer[] getUnusedFeatures() {
-        ArrayList<Integer> features = new ArrayList<Integer>();
-        for(int i = 0; i < usedFeatures.length; i++) {
-            if(!usedFeatures[i]) {
-                features.add(i);
-            }
-        }
-        return (Integer[]) features.toArray();
-    }
 }

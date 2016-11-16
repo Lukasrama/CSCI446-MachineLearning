@@ -21,13 +21,14 @@ public class Node {
     public Node(int column) {
         this.isFeature = true;
         this.column = column;
+        this.children = new ArrayList<Node>();
     }
 
     public Node(DataSet data, Node parent, int column) {
         this.isFeature = false;
         this.column = column;
         this.parent = parent;
-
+        this.children = new ArrayList<Node>();
         this.data = data;
     }
 }

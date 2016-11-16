@@ -23,13 +23,14 @@ public class Main {
          * To keep this class clean, csci446.project3.DataSets has the all the basic info to pass to the algorithm.
          */
         DataSet dataSet = DataParser.parseData(HouseVotes.filename, HouseVotes.columnNames, HouseVotes.dataTypes);
+        //dataSet.print();
         /*
          * The contents of the DataSet are not always random.
          * You can shuffle them using Collections.shuffle()
          */
 
         Collections.shuffle(dataSet);
-
+        //dataSet.print();
         /*
          * Lastly, you want to split the data into a regular dataset and a testing set.
          * DataSet has a function for this, since it gets a little weird.
@@ -38,6 +39,8 @@ public class Main {
 
         DataSet testingSet = dataSet.getTestingSet(.1);
 
+        //testingSet.print();
+        dataSet.print();
         /*
          * Lets setup ID3:
          * DataSet, TestSet, column with the class categorization. (republican, democrat in this case)

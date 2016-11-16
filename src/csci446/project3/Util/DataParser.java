@@ -4,8 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by cetho on 11/2/2016.
@@ -38,6 +37,9 @@ public class DataParser {
             }
             dataSet.add(parsedData);
         }
+
+        fillEmptyData(dataTypes, dataSet);
+
         return dataSet;
     }
 
@@ -73,5 +75,35 @@ public class DataParser {
                 break;
         }
         return data;
+    }
+
+    public static void fillEmptyData(DataType[] dataTypes, DataSet dataset) {
+        Random random = new Random();
+        ArrayList<Data<?>[]> toDelete= new ArrayList<Data<?>[]>();
+        for(int r = 0; r < dataset.size(); r++) {
+            row:
+            for(int i = 0; i < dataset.get(r).length; i++) {
+                //Take null elements and grab just assign it something.
+                if(dataset.get(r)[i] == null) {
+                    switch(dataTypes[i]) {
+                        case Boolean:
+                            //This one is easy.
+                            Data<?> next = new Data<Boolean>(random.nextBoolean());
+                            dataset.get(r)[i] = next;
+                            break;
+                        case Double:
+                            toDelete.add(dataset.get(r));
+                            break row;
+                        case String:
+                            toDelete.add(dataset.get(r));
+                            break row;
+                        case Integer:
+                            toDelete.add(dataset.get(r));
+                            break row;
+                    }
+                }
+            }
+        }
+        dataset.removeAll(toDelete);
     }
 }

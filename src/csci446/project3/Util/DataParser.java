@@ -10,7 +10,7 @@ import java.util.*;
  * Created by cetho on 11/2/2016.
  */
 public class DataParser {
-    public static DataSet parseData(String dataName, String[] columnNames, DataType[] dataTypes) throws IOException, Exception {
+    public static DataSet parseData(String dataName, String[] columnNames, DataType[] dataTypes, int[] ignoreColumns, int classColumn) throws IOException, Exception {
         if(columnNames.length != dataTypes.length) {
             throw new Exception("Column Length Mismatch");
         }
@@ -26,14 +26,26 @@ public class DataParser {
         while ((row = textReader.readLine()) != null) {
             //Got a row. Need the data. Split it by the commas.
             items = (String[]) Arrays.asList(row.split(",")).toArray();
-            parsedData = new Data[items.length];
+            //Don't want to make space for the columns being ignored.
+            parsedData = new Data[items.length - ignoreColumns.length];
             //Just making sure its a valid row.
             if(items.length != dataTypes.length) {
                 throw new Exception("Column Length Mismatch");
             }
-
-            for (int i = 0; i < items.length; i++) {
-                parsedData[i] = generateDataPoint(items[i], dataTypes[i]);
+            int offset = 0;
+            for (int i = 0; i < items.length - ignoreColumns.length; i++) {
+                if(i == classColumn) {
+                    //Class Column is always parsed as a String
+                    parsedData[i] = new Data<String>(items[i+offset]);
+                } else {
+                    parsedData[i] = generateDataPoint(items[i+offset], dataTypes[i]);
+                }
+                for(int j = 0; j < ignoreColumns.length; j++) {
+                    if((i + offset) == ignoreColumns[j]) {
+                        offset++;
+                        i--;
+                    }
+                }
             }
             dataSet.add(parsedData);
         }

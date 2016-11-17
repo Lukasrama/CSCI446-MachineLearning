@@ -34,5 +34,8 @@ public class HouseVotes {
             DataType.Boolean, DataType.Boolean, DataType.Boolean, DataType.Boolean,
     };
 
+    public static final int[] ignoreColumns = {};
+
     public static final String filename = "house-votes-84";
+    public static final int classColumn = 0;
 }

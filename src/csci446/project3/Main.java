@@ -1,6 +1,7 @@
 package csci446.project3;
 
 import com.sun.org.apache.xpath.internal.operations.Bool;
+import csci446.project3.DataSets.BreastCancer;
 import csci446.project3.DataSets.HouseVotes;
 import csci446.project3.ID3.ID3;
 import csci446.project3.Util.Data;
@@ -8,6 +9,7 @@ import csci446.project3.Util.DataParser;
 import csci446.project3.Util.DataSet;
 import csci446.project3.Util.DataType;
 
+import java.util.Collection;
 import java.util.Collections;
 
 public class Main {
@@ -22,34 +24,55 @@ public class Main {
          *
          * To keep this class clean, csci446.project3.DataSets has the all the basic info to pass to the algorithm.
          */
-        DataSet dataSet = DataParser.parseData(HouseVotes.filename, HouseVotes.columnNames, HouseVotes.dataTypes);
-        //dataSet.print();
+        DataSet houseVotes = DataParser.parseData(HouseVotes.filename, HouseVotes.columnNames, HouseVotes.dataTypes, HouseVotes.ignoreColumns, HouseVotes.classColumn);
+        DataSet breastCancer = DataParser.parseData(BreastCancer.filename, BreastCancer.columnNames, BreastCancer.dataTypes, BreastCancer.ignoreColumns, BreastCancer.classColumn);
+        breastCancer.print();
         /*
          * The contents of the DataSet are not always random.
          * You can shuffle them using Collections.shuffle()
          */
 
-        Collections.shuffle(dataSet);
-        //dataSet.print();
+        Collections.shuffle(houseVotes);
+        Collections.shuffle(breastCancer);
         /*
          * Lastly, you want to split the data into a regular dataset and a testing set.
          * DataSet has a function for this, since it gets a little weird.
          * This grabs 10% of the data in the dataset and sets pulls it out to make the testing set.
          */
 
-        DataSet testingSet = dataSet.getTestingSet(.1);
+        DataSet houseVotesTestingSet = houseVotes.getTestingSet(.1);
+        DataSet breastCancerTestingSet = breastCancer.getTestingSet(.1);
 
-        //testingSet.print();
-        dataSet.print();
         /*
          * Lets setup ID3:
          * DataSet, TestSet, column with the class categorization. (republican, democrat in this case)
          */
 
-        ID3 id3 = new ID3(dataSet, testingSet, 0);
+        ID3 id3 = new ID3(houseVotes, houseVotesTestingSet, HouseVotes.classColumn);
+        String[] id3HouseVotes = new String[houseVotesTestingSet.size()];
+        for(int i = 0; i < houseVotesTestingSet.size(); i++) {
+            id3HouseVotes[i] = id3.classify(houseVotesTestingSet.get(i));
+        }
+        for(int i = 0; i < houseVotesTestingSet.size(); i++) {
+            if(id3HouseVotes[i].equals(houseVotesTestingSet.get(i)[HouseVotes.classColumn].value())) {
+                System.out.println("ID3: Correct (" + id3HouseVotes[i] + ")");
+            } else {
+                System.out.println("ID3: Incorrect (" + id3HouseVotes[i] + ", actually " + houseVotesTestingSet.get(i)[HouseVotes.classColumn].value() + ")");
+            }
+        }
 
-
-
+        id3 = new ID3(breastCancer, breastCancerTestingSet, BreastCancer.classColumn);
+        String[] id3BreastCancer = new String[breastCancerTestingSet.size()];
+        for(int i = 0; i < breastCancerTestingSet.size(); i++) {
+            id3BreastCancer[i] = id3.classify(breastCancerTestingSet.get(i));
+        }
+        for(int i = 0; i < breastCancerTestingSet.size(); i++) {
+            if(id3BreastCancer[i].equals(breastCancerTestingSet.get(i)[BreastCancer.classColumn].value())) {
+                System.out.println("ID3: Correct (" + id3BreastCancer[i] + ")");
+            } else {
+                System.out.println("ID3: Incorrect (" + id3BreastCancer[i] + ", actually " + breastCancerTestingSet.get(i)[BreastCancer.classColumn].value() + ")");
+            }
+        }
 
         /*
          * You can use any function in DataSet, its an extension to an ArrayList.

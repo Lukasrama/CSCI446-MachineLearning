@@ -46,8 +46,6 @@ public class ID3 {
         this.classes = new String[classes.size()];
         classes.toArray(this.classes);
         this.generateTree();
-        //Sweet we have a tree.
-        System.out.println("Decision Tree generated.");
     }
 
     public void generateTree() throws Exception {
@@ -64,16 +62,79 @@ public class ID3 {
         while(!unfinishedNodes.isEmpty() && !noMoreFeatures()) {
             Node parent = unfinishedNodes.peek();
             int nextColumn = findHighestGainColumn(parent);
-            //Create the new feature node
-            Node nextNode = new Node(nextColumn);
-            parent.children.add(nextNode);
-            parent.children.get(0).data = parent.data;
-            nextNode.parent = parent;
-            this.usedFeatures[nextColumn] = true;
-            //Get datatype and create children.
-            DataType dt = this.fullDataSet.get(0)[nextColumn].type();
-            createChildrenForFeature(nextNode, dt);
-            unfinishedNodes.remove(parent);
+            if(nextColumn == -1) {
+                //Can't make anymore improvements.
+                parent.notImprovable = true;
+                unfinishedNodes.remove(parent);
+            }
+            else {
+                //Create the new feature node
+                Node nextNode = new Node(nextColumn);
+                parent.children.add(nextNode);
+                parent.children.get(0).data = parent.data;
+                nextNode.parent = parent;
+                this.usedFeatures[nextColumn] = true;
+                //Get datatype and create children.
+                DataType dt = this.fullDataSet.get(0)[nextColumn].type();
+                createChildrenForFeature(nextNode, dt);
+                unfinishedNodes.remove(parent);
+            }
+        }
+    }
+
+    public String classify(Data<?>[] search) {
+        Node current = this.root;
+        Boolean traversed = false;
+        while(true) {
+            if(current.notImprovable || isPure(current)) {
+                //Done
+                break;
+            } else {
+                if(current.isFeature) {
+                    //Search for the child node to go to.
+                    for (Node child: current.children) {
+                        //Check for a matching column.
+                        if(child.data.get(0)[child.column].value().equals(search[child.column].value())) {
+                            current = child;
+                            traversed = true;
+                            break;
+                        }
+                    }
+                    if(!traversed) {
+                        //Couldn't find where to go. Guess we stop here.
+                        break;
+                    }
+                    //Keep going.
+                    traversed = false;
+                }
+                else {
+                    if(current.children.size() > 0) {
+                        current = current.children.get(0);
+                    }
+                    else {
+                        break;
+                    }
+                }
+            }
+        }
+        if(current.isFeature) {
+            current = current.parent;
+        }
+        if(isPure(current)) {
+            return (String) current.data.get(0)[classColumn].value();
+        } else {
+            //Make the highest probability guess.
+            String[] classes = getNodeClassValues(current);
+            int[] classCounts = nodeClassCount(current);
+            int max = Integer.MIN_VALUE;
+            int maxCol = -1;
+            for(int i = 0; i < classCounts.length; i++) {
+                if(max < classCounts[i]) {
+                    max = classCounts[i];
+                    maxCol = i;
+                }
+            }
+            return classes[maxCol];
         }
     }
 
@@ -118,9 +179,11 @@ public class ID3 {
                     }
                 }
                 if(indexes.size() > 0) {
-                    Node newNode = new Node(parent.data.createSubset((Integer[]) indexes.toArray()), parent, parent.column);
+                    Node newNode = new Node(parent.data.createSubset(indexes.toArray(new Integer[indexes.size()])), parent, parent.column);
                     parent.children.add(newNode);
-                    this.unfinishedNodes.add(newNode);
+                    if(!isPure(newNode)) {
+                        this.unfinishedNodes.add(newNode);
+                    }
                 }
             }
         } else if (dataType == DataType.Integer) {
@@ -135,9 +198,11 @@ public class ID3 {
                     }
                 }
                 if(indexes.size() > 0) {
-                    Node newNode = new Node(parent.data.createSubset((Integer[]) indexes.toArray()), parent, parent.column);
+                    Node newNode = new Node(parent.data.createSubset(indexes.toArray(new Integer[indexes.size()])), parent, parent.column);
                     parent.children.add(newNode);
-                    this.unfinishedNodes.add(newNode);
+                    if(!isPure(newNode)) {
+                        this.unfinishedNodes.add(newNode);
+                    }
                 }
             }
         } else {
@@ -153,9 +218,11 @@ public class ID3 {
                     }
                 }
                 if(indexes.size() > 0) {
-                    Node newNode = new Node(parent.data.createSubset((Integer[]) indexes.toArray()), parent, parent.column);
+                    Node newNode = new Node(parent.data.createSubset(indexes.toArray(new Integer[indexes.size()])), parent, parent.column);
                     parent.children.add(newNode);
-                    this.unfinishedNodes.add(newNode);
+                    if(!isPure(newNode)) {
+                        this.unfinishedNodes.add(newNode);
+                    }
                 }
             }
         }
@@ -185,9 +252,6 @@ public class ID3 {
                 }
             }
         }
-        if(highestColumn == -1) {
-            System.out.println(this.usedFeatures.toString());
-        }
         return highestColumn;
     }
 
@@ -202,9 +266,6 @@ public class ID3 {
                     highestColumn = j;
                 }
             }
-        }
-        if(highestColumn == -1) {
-            System.out.println(this.usedFeatures.toString());
         }
         return highestColumn;
     }
@@ -387,7 +448,7 @@ public class ID3 {
                     //Look for the class index corresponding to the class of this data point.
                     if (((String) data.get(i)[classColumn].value()).equals(classes[j])) {
                         //Increment the number of occurrences for this node.
-                        classOccurrences[i]++;
+                        classOccurrences[j]++;
                         break;
                     }
                 }
@@ -412,7 +473,7 @@ public class ID3 {
                     //Look for the class index corresponding to the class of this data point.
                     if (((String) data.get(i)[classColumn].value()).equals(classes[j])) {
                         //Increment the number of occurrences for this node.
-                        classOccurrences[i]++;
+                        classOccurrences[j]++;
                         break;
                     }
                 }
@@ -437,7 +498,7 @@ public class ID3 {
                     //Look for the class index corresponding to the class of this data point.
                     if (((String) data.get(i)[classColumn].value()).equals(classes[j])) {
                         //Increment the number of occurrences for this node.
-                        classOccurrences[i]++;
+                        classOccurrences[j]++;
                         break;
                     }
                 }
@@ -478,6 +539,36 @@ public class ID3 {
             }
         }
         return classOccurrences;
+    }
+
+    public int[] nodeClassCount(Node node) {
+        DataSet data = node.data;
+
+        int classOccurrences[] = new int[classes.length];
+
+        for(int i = 0; i < data.size(); i++) {
+            for(int j = 0; j < classes.length; j++) {
+                //Look for the class index corresponding to the class of this data point.
+                if(((String) data.get(i)[classColumn].value()).equals(classes[j])) {
+                    //Increment the number of occurrences for this node.
+                    classOccurrences[j]++;
+                    break;
+                }
+            }
+        }
+        return classOccurrences;
+    }
+
+    public String[] getNodeClassValues(Node node) {
+        DataSet data = node.data;
+        ArrayList<String> values = new ArrayList<String>();
+        // Build a list of all values for a feature.
+        for(int i = 0; i < data.size(); i++) {
+            if(!values.contains((String) data.get(i)[classColumn].value())) {
+                values.add((String) data.get(i)[classColumn].value());
+            }
+        }
+        return values.toArray(new String[values.size()]);
     }
 
     public double entropy(double[] probabilities) {

@@ -18,6 +18,8 @@ public class Node {
 
     public DataSet data;
 
+    public boolean notImprovable = false;
+
     public Node(int column) {
         this.isFeature = true;
         this.column = column;

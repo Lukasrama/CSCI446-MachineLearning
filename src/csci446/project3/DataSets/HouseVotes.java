@@ -34,6 +34,14 @@ public class HouseVotes {
             DataType.Boolean, DataType.Boolean, DataType.Boolean, DataType.Boolean,
     };
 
+    //Negative to not discretize the corresponding column. Other values will discretize into that many columns.
+    public static final int[] discretizeColumns = {-1,
+            -1, -1, -1, -1,
+            -1, -1, -1, -1,
+            -1, -1, -1, -1,
+            -1, -1, -1, -1,
+    };
+
     public static final int[] ignoreColumns = {};
 
     public static final String filename = "house-votes-84";

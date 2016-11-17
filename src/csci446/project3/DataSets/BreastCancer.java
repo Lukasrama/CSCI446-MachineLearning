@@ -8,7 +8,7 @@ import csci446.project3.Util.DataType;
 public class BreastCancer {
 
     public static final String[] columnNames = {
-            "Sample Code Number",
+            "Sample Code Number (Removed)",
             "Clump Thickness",
             "Uniformity of Cell Size",
             "Uniformity of Cell Shape",
@@ -22,9 +22,16 @@ public class BreastCancer {
     };
 
     public static final DataType[] dataTypes = {
-            DataType.Integer, DataType.Integer, DataType.Integer, DataType.Integer, DataType.Integer,
+            DataType.Integer, DataType.Integer, DataType.Integer, DataType.Integer,
             DataType.Integer, DataType.Integer, DataType.Integer, DataType.Integer, DataType.Integer,
             DataType.String
+    };
+
+    //Integer is already in bins of 10 so it works out nicely. No need for discretizing.
+    public static final int[] discretizeColumns = {
+            -1, -1, -1, -1,
+            -1, -1, -1, -1, -1,
+            -1,
     };
 
     public static final int[] ignoreColumns = {0};

@@ -10,10 +10,7 @@ import java.util.*;
  * Created by cetho on 11/2/2016.
  */
 public class DataParser {
-    public static DataSet parseData(String dataName, String[] columnNames, DataType[] dataTypes, int[] ignoreColumns, int classColumn) throws IOException, Exception {
-        if(columnNames.length != dataTypes.length) {
-            throw new Exception("Column Length Mismatch");
-        }
+    public static DataSet parseData(String dataName, String[] columnNames, DataType[] dataTypes, int[] ignoreColumns, int classColumn, int[] discretizeColumns) throws IOException, Exception {
         //Create a new DataSet
         DataSet dataSet = new DataSet();
         //Open the file.
@@ -29,9 +26,6 @@ public class DataParser {
             //Don't want to make space for the columns being ignored.
             parsedData = new Data[items.length - ignoreColumns.length];
             //Just making sure its a valid row.
-            if(items.length != dataTypes.length) {
-                throw new Exception("Column Length Mismatch");
-            }
             int offset = 0;
             for (int i = 0; i < items.length - ignoreColumns.length; i++) {
                 if(i == classColumn) {
@@ -51,6 +45,10 @@ public class DataParser {
         }
 
         fillEmptyData(dataTypes, dataSet);
+
+        for(int i = 0; i < dataSet.get(0).length; i++) {
+            discretizeColumn(dataTypes[i], i, dataSet, discretizeColumns);
+        }
 
         return dataSet;
     }
@@ -117,5 +115,79 @@ public class DataParser {
             }
         }
         dataset.removeAll(toDelete);
+    }
+
+    public static void discretizeColumn(DataType dataType, int column, DataSet dataSet, int[] discretizeColumns) {
+        if(discretizeColumns[column] == -1) {
+            return;
+        }
+        if(dataType == DataType.Double) {
+            Double max = getMaxDouble(column, dataSet);
+            Double min = getMinDouble(column, dataSet);
+            //Split into however many equal sized bins as specified in the discretizeColumns
+            Double interval = (max - min)/((double) discretizeColumns[column]);
+
+            for(double i = min; i <= max - interval; i += interval) {
+                for(int j = 0; j < dataSet.size(); j++) {
+                    if(((Double) dataSet.get(j)[column].value()) >= i && ((Double) dataSet.get(j)[column].value()) < (i + interval)) {
+                        //Bin it!
+                        dataSet.get(j)[column] = new Data<Double>(i);
+                    }
+                }
+            }
+        } else {
+            Integer max = getMaxInteger(column, dataSet);
+            Integer min = getMinInteger(column, dataSet);
+            //Split into however many equal sized bins as specified in the discretizeColumns
+            Integer interval = (max - min)/discretizeColumns[column];
+
+            for(int i = min; i <= max - interval; i += interval) {
+                for(int j = 0; j < dataSet.size(); j++) {
+                    if(((Integer) dataSet.get(j)[column].value()) >= i && ((Integer) dataSet.get(j)[column].value()) < (i + interval)) {
+                        //Bin it!
+                        dataSet.get(j)[column] = new Data<Integer>(i);
+                    }
+                }
+            }
+        }
+    }
+
+    public static Double getMaxDouble(int column, DataSet dataSet) {
+        Double max = Double.MIN_VALUE;
+        for(Data<?>[] item : dataSet) {
+            if(((Double) item[column].value()) > max) {
+                max = (Double) item[column].value();
+            }
+        }
+        return max;
+    }
+    public static Double getMinDouble(int column, DataSet dataSet) {
+        Double min = Double.MAX_VALUE;
+        for(Data<?>[] item : dataSet) {
+            if(((Double) item[column].value()) < min) {
+                min = (Double) item[column].value();
+            }
+        }
+        return min;
+    }
+
+    public static Integer getMaxInteger(int column, DataSet dataSet) {
+        Integer max = Integer.MIN_VALUE;
+        for(Data<?>[] item : dataSet) {
+            if(((Integer) item[column].value()) > max) {
+                max = (Integer) item[column].value();
+            }
+        }
+        return max;
+    }
+
+    public static Integer getMinInteger(int column, DataSet dataSet) {
+        Integer min = Integer.MAX_VALUE;
+        for(Data<?>[] item : dataSet) {
+            if(((Integer) item[column].value()) < min) {
+                min = (Integer) item[column].value();
+            }
+        }
+        return min;
     }
 }

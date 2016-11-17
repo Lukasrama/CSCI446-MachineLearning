@@ -124,7 +124,6 @@ public class ID3 {
             return (String) current.data.get(0)[classColumn].value();
         } else {
             //Make the highest probability guess.
-            String[] classes = getNodeClassValues(current);
             int[] classCounts = nodeClassCount(current);
             int max = Integer.MIN_VALUE;
             int maxCol = -1;
@@ -134,7 +133,7 @@ public class ID3 {
                     maxCol = i;
                 }
             }
-            return classes[maxCol];
+            return this.classes[maxCol];
         }
     }
 
@@ -556,6 +555,7 @@ public class ID3 {
                 }
             }
         }
+
         return classOccurrences;
     }
 
